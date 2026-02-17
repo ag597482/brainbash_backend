@@ -29,7 +29,8 @@ type StaticConfig struct {
 		MetricSamplingRate float64 `mapstructure:"metric_sampling_rate"`
 	} `mapstructure:"app"`
 	Auth struct {
-		JWTSecret string `mapstructure:"jwt_secret"`
+		JWTSecret      string `mapstructure:"jwt_secret"`
+		GoogleClientID string `mapstructure:"google_client_id"`
 	} `mapstructure:"auth"`
 }
 

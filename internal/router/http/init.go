@@ -45,13 +45,13 @@ func Init(cfg *config.AppConfig) {
 
 	// Public routes (no auth required)
 	router.GET("/health", controllers.HealthController.Health)
+	router.POST("/auth/google", controllers.AuthController.GoogleLogin)
 
 	// Protected routes (JWT auth required)
 	authorized := router.Group("/")
 	authorized.Use(middleware.AuthMiddleware(cfg.StaticConfig.Auth.JWTSecret))
 	{
-		// Register protected routes here, for example:
-		// authorized.GET("/users", controllers.UserController.List)
+		authorized.GET("/auth/me", controllers.AuthController.Me)
 	}
 }
 

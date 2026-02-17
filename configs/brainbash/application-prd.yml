@@ -7,3 +7,4 @@ app:
 
 auth:
   jwt_secret: ${JWT_SECRET}
+  google_client_id: ${GOOGLE_CLIENT_ID}
