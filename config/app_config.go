@@ -28,6 +28,9 @@ type StaticConfig struct {
 		LogLevel           string  `mapstructure:"log_level"`
 		MetricSamplingRate float64 `mapstructure:"metric_sampling_rate"`
 	} `mapstructure:"app"`
+	Auth struct {
+		JWTSecret string `mapstructure:"jwt_secret"`
+	} `mapstructure:"auth"`
 }
 
 type DynamicConfig struct{}

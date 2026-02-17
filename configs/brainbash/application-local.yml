@@ -4,3 +4,6 @@ app:
   log_level: ${APP_LOG_LEVEL}
   port: ${APP_PORT}
   metric_sampling_rate: ${APP_METRIC_SAMPLING_RATE}
+
+auth:
+  jwt_secret: ${JWT_SECRET}

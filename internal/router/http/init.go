@@ -9,6 +9,7 @@ import (
 
 	"brainbash_backend/config"
 	controller "brainbash_backend/internal/controller/http"
+	"brainbash_backend/internal/middleware"
 )
 
 var (
@@ -42,8 +43,16 @@ func Init(cfg *config.AppConfig) {
 
 	controllers := controller.NewControllers(cfg)
 
-	// Health check
+	// Public routes (no auth required)
 	router.GET("/health", controllers.HealthController.Health)
+
+	// Protected routes (JWT auth required)
+	authorized := router.Group("/")
+	authorized.Use(middleware.AuthMiddleware(cfg.StaticConfig.Auth.JWTSecret))
+	{
+		// Register protected routes here, for example:
+		// authorized.GET("/users", controllers.UserController.List)
+	}
 }
 
 // Instance returns the initialized gin engine.
