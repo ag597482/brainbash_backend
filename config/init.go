@@ -26,7 +26,7 @@ func InitGlobalConfig(conf GlobalConf) {
 
 	configLocation := viper.GetString(envConfigLocation)
 	if configLocation == "" {
-		configLocation = "/opt/config"
+		configLocation = "./configs/brainbash"
 	}
 
 	staticConfigFilePath := fmt.Sprintf("%s/application-%s.yml", configLocation, environment)
