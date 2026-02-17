@@ -41,6 +41,9 @@ func initEngine(cfg *config.AppConfig, middlewares ...gin.HandlerFunc) {
 func Init(cfg *config.AppConfig) {
 	initEngine(cfg)
 
+	// CORS must be registered before any routes
+	router.Use(middleware.CORSMiddleware())
+
 	controllers := controller.NewControllers(cfg)
 
 	// Public routes (no auth required)

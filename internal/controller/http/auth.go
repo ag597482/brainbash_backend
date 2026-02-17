@@ -25,15 +25,27 @@ func NewAuthController(googleAuthService *service.GoogleAuthService, jwtSecret s
 }
 
 // GoogleLogin handles POST /auth/google.
-// It verifies the Google ID token and returns an app JWT.
+// Accepts either id_token (from mobile) or access_token (from web).
 func (ac *AuthController) GoogleLogin(c *gin.Context) {
 	var req request.GoogleLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id_token is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id_token or access_token is required"})
 		return
 	}
 
-	googleUser, err := ac.googleAuthService.VerifyIDToken(req.IDToken)
+	var googleUser *service.GoogleUserInfo
+	var err error
+
+	switch {
+	case req.IDToken != "":
+		googleUser, err = ac.googleAuthService.VerifyIDToken(req.IDToken)
+	case req.AccessToken != "":
+		googleUser, err = ac.googleAuthService.VerifyAccessToken(req.AccessToken)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id_token or access_token is required"})
+		return
+	}
+
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Google token: " + err.Error()})
 		return
