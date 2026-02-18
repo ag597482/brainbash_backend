@@ -44,6 +44,11 @@ func (s *ScoreService) SubmitGameResult(ctx context.Context, userID string, req 
 	return result, nil
 }
 
+// GetUserStats returns the user's score document from the scores collection, or nil if not found.
+func (s *ScoreService) GetUserStats(ctx context.Context, userID string) (*entity.Score, error) {
+	return s.scoreRepo.FindByUserID(ctx, userID)
+}
+
 // AppendSession adds a session for the user and game type, then recomputes avg_score, high_score, and overall_score.
 func (s *ScoreService) AppendSession(ctx context.Context, userID, gameType string, questionResponses interface{}, result *scoring.ScoreResult) error {
 	score, err := s.scoreRepo.FindByUserID(ctx, userID)
