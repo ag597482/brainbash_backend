@@ -50,6 +50,9 @@ func Init(cfg *config.AppConfig) {
 	router.GET("/health", controllers.HealthController.Health)
 	router.POST("/auth/google", controllers.AuthController.GoogleLogin)
 
+	// Debug routes
+	router.GET("/debug/users/:user_id", controllers.DebugController.GetUser)
+
 	// Protected routes (JWT auth required)
 	authorized := router.Group("/")
 	authorized.Use(middleware.AuthMiddleware(cfg.StaticConfig.Auth.JWTSecret))

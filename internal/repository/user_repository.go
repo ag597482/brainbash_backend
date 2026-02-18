@@ -53,6 +53,19 @@ func (r *UserRepository) UpsertByGaID(ctx context.Context, user *entity.User) (*
 	return &result, nil
 }
 
+// FindByEmail finds a user by email.
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
+	var user entity.User
+	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to find user by email: %w", err)
+	}
+	return &user, nil
+}
+
 // FindByUserID finds a user by their MongoDB ObjectID.
 func (r *UserRepository) FindByUserID(ctx context.Context, userID bson.ObjectID) (*entity.User, error) {
 	var user entity.User

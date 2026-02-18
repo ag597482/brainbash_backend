@@ -54,12 +54,21 @@ func (ac *AuthController) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	// Upsert user in MongoDB
-	persistedUser, err := ac.userService.UpsertFromGoogleLogin(c.Request.Context(), googleUser)
+	// If user already exists by email, use stored details and do not create a new user
+	persistedUser, err := ac.userService.FindByEmail(c.Request.Context(), googleUser.Email)
 	if err != nil {
-		log.Printf("Failed to upsert user: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save user"})
+		log.Printf("Failed to find user by email: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to lookup user"})
 		return
+	}
+	if persistedUser == nil {
+		// New user: create in MongoDB
+		persistedUser, err = ac.userService.UpsertFromGoogleLogin(c.Request.Context(), googleUser)
+		if err != nil {
+			log.Printf("Failed to save user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save user"})
+			return
+		}
 	}
 
 	// Generate app JWT with user_id as the subject
@@ -75,6 +84,7 @@ func (ac *AuthController) GoogleLogin(c *gin.Context) {
 		return
 	}
 
+	// Use stored user details for response (existing or newly created)
 	c.JSON(http.StatusOK, response.LoginResponse{
 		AccessToken: tokenString,
 		User: response.UserInfo{

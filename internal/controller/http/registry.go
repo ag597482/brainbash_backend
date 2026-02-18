@@ -11,6 +11,7 @@ import (
 type Controllers struct {
 	HealthController *HealthController
 	AuthController   *AuthController
+	DebugController  *DebugController
 }
 
 func NewControllers(cfg *config.AppConfig) *Controllers {
@@ -22,5 +23,6 @@ func NewControllers(cfg *config.AppConfig) *Controllers {
 	return &Controllers{
 		HealthController: NewHealthController(),
 		AuthController:   NewAuthController(googleAuthService, userService, cfg.StaticConfig.Auth.JWTSecret),
+		DebugController:  NewDebugController(userService),
 	}
 }
