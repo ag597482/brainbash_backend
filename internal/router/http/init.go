@@ -52,12 +52,15 @@ func Init(cfg *config.AppConfig) {
 
 	// Debug routes
 	router.GET("/debug/users/:user_id", controllers.DebugController.GetUser)
+	router.POST("/debug/jwt", controllers.DebugController.GenerateJWT)
 
 	// Protected routes (JWT auth required)
 	authorized := router.Group("/")
 	authorized.Use(middleware.AuthMiddleware(cfg.StaticConfig.Auth.JWTSecret))
 	{
 		authorized.GET("/auth/me", controllers.AuthController.Me)
+		authorized.POST("/score", controllers.ScoringController.Calculate)
+		authorized.POST("/api/game/result", controllers.ScoringController.GameResult)
 	}
 }
 

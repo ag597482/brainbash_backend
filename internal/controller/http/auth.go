@@ -75,7 +75,7 @@ func (ac *AuthController) GoogleLogin(c *gin.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": persistedUser.UserID.Hex(),
 		"iat": time.Now().Unix(),
-		"exp": time.Now().Add(24 * time.Hour).Unix(),
+		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(ac.jwtSecret))
