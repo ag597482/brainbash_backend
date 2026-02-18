@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -14,12 +15,14 @@ import (
 
 type AuthController struct {
 	googleAuthService *service.GoogleAuthService
+	userService       *service.UserService
 	jwtSecret         string
 }
 
-func NewAuthController(googleAuthService *service.GoogleAuthService, jwtSecret string) *AuthController {
+func NewAuthController(googleAuthService *service.GoogleAuthService, userService *service.UserService, jwtSecret string) *AuthController {
 	return &AuthController{
 		googleAuthService: googleAuthService,
+		userService:       userService,
 		jwtSecret:         jwtSecret,
 	}
 }
@@ -51,14 +54,19 @@ func (ac *AuthController) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	// Generate app JWT with user claims
+	// Upsert user in MongoDB
+	persistedUser, err := ac.userService.UpsertFromGoogleLogin(c.Request.Context(), googleUser)
+	if err != nil {
+		log.Printf("Failed to upsert user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save user"})
+		return
+	}
+
+	// Generate app JWT with user_id as the subject
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":     googleUser.Sub,
-		"email":   googleUser.Email,
-		"name":    googleUser.Name,
-		"picture": googleUser.Picture,
-		"iat":     time.Now().Unix(),
-		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+		"sub": persistedUser.UserID.Hex(),
+		"iat": time.Now().Unix(),
+		"exp": time.Now().Add(24 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(ac.jwtSecret))
@@ -70,10 +78,10 @@ func (ac *AuthController) GoogleLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, response.LoginResponse{
 		AccessToken: tokenString,
 		User: response.UserInfo{
-			ID:        googleUser.Sub,
-			Email:     googleUser.Email,
-			Name:      googleUser.Name,
-			Picture:   googleUser.Picture,
+			UserID:    persistedUser.UserID.Hex(),
+			Email:     persistedUser.Email,
+			Name:      persistedUser.Name,
+			Picture:   persistedUser.Picture,
 			FirstName: googleUser.GivenName,
 			LastName:  googleUser.FamilyName,
 		},
@@ -81,7 +89,7 @@ func (ac *AuthController) GoogleLogin(c *gin.Context) {
 }
 
 // Me handles GET /auth/me.
-// Returns the current authenticated user's info from JWT claims.
+// Reads user_id (sub) from JWT claims, fetches user from DB.
 func (ac *AuthController) Me(c *gin.Context) {
 	claims, exists := c.Get("claims")
 	if !exists {
@@ -95,11 +103,28 @@ func (ac *AuthController) Me(c *gin.Context) {
 		return
 	}
 
+	userID := getString(mapClaims, "sub")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: missing sub"})
+		return
+	}
+
+	user, err := ac.userService.FindByUserID(c.Request.Context(), userID)
+	if err != nil {
+		log.Printf("Failed to fetch user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
 	c.JSON(http.StatusOK, response.UserInfo{
-		ID:      getString(mapClaims, "sub"),
-		Email:   getString(mapClaims, "email"),
-		Name:    getString(mapClaims, "name"),
-		Picture: getString(mapClaims, "picture"),
+		UserID:  user.UserID.Hex(),
+		Email:   user.Email,
+		Name:    user.Name,
+		Picture: user.Picture,
 	})
 }
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"brainbash_backend/config"
+	appMongo "brainbash_backend/internal/mongo"
 	httpRouter "brainbash_backend/internal/router/http"
 )
 
@@ -54,6 +55,10 @@ func (a *App) Start() error {
 
 	if err := a.httpServer.Shutdown(ctx); err != nil {
 		return err
+	}
+
+	if err := appMongo.Disconnect(ctx); err != nil {
+		log.Printf("Failed to disconnect MongoDB: %v", err)
 	}
 
 	log.Println("Server stopped gracefully")

@@ -32,6 +32,10 @@ type StaticConfig struct {
 		JWTSecret      string `mapstructure:"jwt_secret"`
 		GoogleClientID string `mapstructure:"google_client_id"`
 	} `mapstructure:"auth"`
+	Mongo struct {
+		URI      string `mapstructure:"uri"`
+		Database string `mapstructure:"database"`
+	} `mapstructure:"mongo"`
 }
 
 type DynamicConfig struct{}

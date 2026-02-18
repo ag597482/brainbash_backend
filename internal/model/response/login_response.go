@@ -9,7 +9,7 @@ type LoginResponse struct {
 
 // UserInfo represents user details returned in auth responses.
 type UserInfo struct {
-	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
 	Picture   string `json:"picture"`
