@@ -13,10 +13,13 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 
-		// Allow requests from local dev (any port) and GitHub Pages deployment
+		// Allow requests from local dev (any port), GitHub Pages, and Railway
 		allowed := origin == "https://ag597482.github.io" ||
-			len(origin) > 0 && (origin == "http://localhost" ||
-				strings.HasPrefix(origin, "http://localhost:"))
+			origin == "https://brainbashbackend-brainbash.up.railway.app" ||
+			strings.HasSuffix(origin, ".up.railway.app") ||
+			(len(origin) > 0 && (origin == "http://localhost" ||
+				strings.HasPrefix(origin, "http://localhost:") ||
+				strings.HasPrefix(origin, "http://127.0.0.1:")))
 
 		if allowed {
 			c.Header("Access-Control-Allow-Origin", origin)

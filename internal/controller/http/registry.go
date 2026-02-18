@@ -23,11 +23,13 @@ func NewControllers(cfg *config.AppConfig) *Controllers {
 	userService := service.NewUserService(userRepo)
 
 	scorer := scoring.NewScorer()
+	scoreRepo := repository.NewScoreRepository(appMongo.GetDatabase())
+	scoreService := service.NewScoreService(scoreRepo, scorer)
 
 	return &Controllers{
 		HealthController:  NewHealthController(),
 		AuthController:    NewAuthController(googleAuthService, userService, cfg.StaticConfig.Auth.JWTSecret),
 		DebugController:   NewDebugController(cfg, userService),
-		ScoringController: NewScoringController(scorer),
+		ScoringController: NewScoringController(scorer, scoreService),
 	}
 }
