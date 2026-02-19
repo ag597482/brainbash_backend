@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -24,14 +25,23 @@ type GoogleUserInfo struct {
 
 // GoogleAuthService handles Google token verification.
 type GoogleAuthService struct {
-	clientID   string
-	httpClient *http.Client
+	allowedClientIDs map[string]struct{} // set of accepted client IDs (web, Android, etc.)
+	httpClient       *http.Client
 }
 
 // NewGoogleAuthService creates a new GoogleAuthService.
-func NewGoogleAuthService(clientID string) *GoogleAuthService {
+// clientIDs is one or more Google OAuth client IDs (comma-separated string split into list).
+// Any of these are accepted as the id_token "aud" claim (e.g. web + Android).
+func NewGoogleAuthService(clientIDs []string) *GoogleAuthService {
+	allowed := make(map[string]struct{})
+	for _, id := range clientIDs {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			allowed[id] = struct{}{}
+		}
+	}
 	return &GoogleAuthService{
-		clientID: clientID,
+		allowedClientIDs: allowed,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -61,8 +71,8 @@ func (s *GoogleAuthService) VerifyIDToken(idToken string) (*GoogleUserInfo, erro
 		return nil, fmt.Errorf("failed to decode Google token response: %w", err)
 	}
 
-	if payload.Aud != s.clientID {
-		return nil, fmt.Errorf("token audience mismatch: expected %s, got %s", s.clientID, payload.Aud)
+	if _, allowed := s.allowedClientIDs[payload.Aud]; !allowed {
+		return nil, fmt.Errorf("token audience mismatch: token aud %q is not in allowed client IDs", payload.Aud)
 	}
 
 	return &payload.GoogleUserInfo, nil

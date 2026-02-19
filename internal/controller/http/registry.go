@@ -6,6 +6,7 @@ import (
 	"brainbash_backend/internal/repository"
 	"brainbash_backend/internal/scoring"
 	"brainbash_backend/internal/service"
+	"strings"
 )
 
 // Controllers handles dependency injection in a centralized place.
@@ -17,7 +18,7 @@ type Controllers struct {
 }
 
 func NewControllers(cfg *config.AppConfig) *Controllers {
-	googleAuthService := service.NewGoogleAuthService(cfg.StaticConfig.Auth.GoogleClientID)
+	googleAuthService := service.NewGoogleAuthService(splitTrim(cfg.StaticConfig.Auth.GoogleClientID, ","))
 
 	userRepo := repository.NewUserRepository(appMongo.GetDatabase())
 	userService := service.NewUserService(userRepo)
@@ -32,4 +33,20 @@ func NewControllers(cfg *config.AppConfig) *Controllers {
 		DebugController:  NewDebugController(cfg, userService),
 		ScoreController:  NewScoreController(scorer, scoreService),
 	}
+}
+
+// splitTrim splits s by sep and trims each element; returns nil for empty s.
+func splitTrim(s, sep string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, sep)
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }
