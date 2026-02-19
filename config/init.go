@@ -36,6 +36,17 @@ func InitGlobalConfig(conf GlobalConf) {
 	}
 }
 
+// expandEnvQuoted expands ${VAR} with os.Getenv(VAR), wrapping each value in
+// double quotes and escaping " and \ so the result remains valid YAML.
+func expandEnvQuoted(s string) string {
+	return os.Expand(s, func(key string) string {
+		val := os.Getenv(key)
+		val = strings.ReplaceAll(val, "\\", "\\\\")
+		val = strings.ReplaceAll(val, "\"", "\\\"")
+		return "\"" + val + "\""
+	})
+}
+
 // initEnv loads key=value pairs from application.env into OS environment variables.
 // Existing env vars are not overwritten so that real env takes precedence.
 func initEnv() {
@@ -63,6 +74,11 @@ func initEnv() {
 
 	// Bind all env vars into viper so they are accessible via viper.GetString()
 	viper.AutomaticEnv()
+
+	// Railway sets PORT; map it to APP_PORT if APP_PORT is not set
+	if os.Getenv("APP_PORT") == "" && os.Getenv("PORT") != "" {
+		os.Setenv("APP_PORT", os.Getenv("PORT"))
+	}
 }
 
 func loadStaticConfig(filePath string, config interface{}, deployableName string) error {
@@ -74,8 +90,9 @@ func loadStaticConfig(filePath string, config interface{}, deployableName string
 		return nil
 	}
 
-	// Replace ${ENV_VAR} placeholders with actual environment values
-	expanded := os.ExpandEnv(string(configBytes))
+	// Replace ${ENV_VAR} placeholders with actual environment values.
+	// Quote substituted values so URIs (e.g. mongodb://...) don't break YAML parsing.
+	expanded := expandEnvQuoted(string(configBytes))
 
 	v := viper.New()
 	v.SetConfigType("yaml")
