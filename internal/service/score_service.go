@@ -15,13 +15,14 @@ import (
 
 // ScoreService appends sessions and maintains per-game-type and overall scores.
 type ScoreService struct {
-	scoreRepo *repository.ScoreRepository
-	scorer    *scoring.Scorer
+	scoreRepo        *repository.ScoreRepository
+	scorer           *scoring.Scorer
+	dashboardService *DashboardService
 }
 
 // NewScoreService creates a new ScoreService.
-func NewScoreService(scoreRepo *repository.ScoreRepository, scorer *scoring.Scorer) *ScoreService {
-	return &ScoreService{scoreRepo: scoreRepo, scorer: scorer}
+func NewScoreService(scoreRepo *repository.ScoreRepository, scorer *scoring.Scorer, dashboardService *DashboardService) *ScoreService {
+	return &ScoreService{scoreRepo: scoreRepo, scorer: scorer, dashboardService: dashboardService}
 }
 
 // SubmitGameResult validates gametype, calculates score, persists the session, and returns the score result.
@@ -37,9 +38,13 @@ func (s *ScoreService) SubmitGameResult(ctx context.Context, userID string, req 
 		return nil, err
 	}
 
-	if err := s.AppendSession(ctx, userID, req.GameType, req.QuestionResponses, result); err != nil {
+	session, err := s.AppendSession(ctx, userID, req.GameType, req.QuestionResponses, result)
+	if err != nil {
 		return nil, err
 	}
+
+	// Update dashboard (top 10) for this game type if this score qualifies
+	_ = s.dashboardService.MaybeUpdateTop10(ctx, req.GameType, userID, session.SessionID, session.SessionScore, session.Timestamp)
 
 	return result, nil
 }
@@ -50,10 +55,11 @@ func (s *ScoreService) GetUserStats(ctx context.Context, userID string) (*entity
 }
 
 // AppendSession adds a session for the user and game type, then recomputes avg_score, high_score, and overall_score.
-func (s *ScoreService) AppendSession(ctx context.Context, userID, gameType string, questionResponses interface{}, result *scoring.ScoreResult) error {
+// Returns the created session for use by dashboard updates.
+func (s *ScoreService) AppendSession(ctx context.Context, userID, gameType string, questionResponses interface{}, result *scoring.ScoreResult) (*entity.Session, error) {
 	score, err := s.scoreRepo.FindByUserID(ctx, userID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if score == nil {
 		score = &entity.Score{UserID: userID, OverallScore: result.Score}
@@ -109,7 +115,10 @@ func (s *ScoreService) AppendSession(ctx context.Context, userID, gameType strin
 		score.OverallScore = result.Score
 	}
 
-	return s.scoreRepo.Upsert(ctx, score)
+	if err := s.scoreRepo.Upsert(ctx, score); err != nil {
+		return nil, err
+	}
+	return &session, nil
 }
 
 func getGameTypeScore(score *entity.Score, gameType string) *entity.GameTypeScore {

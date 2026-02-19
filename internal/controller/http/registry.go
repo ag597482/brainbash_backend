@@ -11,10 +11,11 @@ import (
 
 // Controllers handles dependency injection in a centralized place.
 type Controllers struct {
-	HealthController *HealthController
-	AuthController   *AuthController
-	DebugController  *DebugController
-	ScoreController  *ScoreController
+	HealthController    *HealthController
+	AuthController      *AuthController
+	DebugController     *DebugController
+	ScoreController     *ScoreController
+	DashboardController *DashboardController
 }
 
 func NewControllers(cfg *config.AppConfig) *Controllers {
@@ -25,13 +26,16 @@ func NewControllers(cfg *config.AppConfig) *Controllers {
 
 	scorer := scoring.NewScorer()
 	scoreRepo := repository.NewScoreRepository(appMongo.GetDatabase())
-	scoreService := service.NewScoreService(scoreRepo, scorer)
+	dashboardRepo := repository.NewDashboardRepository(appMongo.GetDatabase())
+	dashboardService := service.NewDashboardService(dashboardRepo, userService)
+	scoreService := service.NewScoreService(scoreRepo, scorer, dashboardService)
 
 	return &Controllers{
-		HealthController: NewHealthController(),
-		AuthController:   NewAuthController(googleAuthService, userService, cfg.StaticConfig.Auth.JWTSecret),
-		DebugController:  NewDebugController(cfg, userService),
-		ScoreController:  NewScoreController(scorer, scoreService),
+		HealthController:    NewHealthController(),
+		AuthController:      NewAuthController(googleAuthService, userService, cfg.StaticConfig.Auth.JWTSecret),
+		DebugController:     NewDebugController(cfg, userService),
+		ScoreController:     NewScoreController(scorer, scoreService),
+		DashboardController: NewDashboardController(dashboardService),
 	}
 }
 
