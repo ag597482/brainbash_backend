@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"brainbash_backend/internal/game"
 	"brainbash_backend/internal/model/entity"
 	"brainbash_backend/internal/model/request"
 	"brainbash_backend/internal/model/response"
@@ -37,6 +38,36 @@ func (sc *ScoreController) Calculate(c *gin.Context) {
 	}
 
 	result, err := sc.scorer.Calculate(req.Strategy, req.QuestionResponses)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.ScoringResponse{
+		Score:     result.Score,
+		Questions: result.Questions,
+		Correct:   result.Correct,
+		Accuracy:  result.Accuracy,
+		AvgTime:   result.AvgTime,
+	})
+}
+
+// GameCalculate handles POST /api/game/guest/result. Same request as /api/game/result (gametype, question_responses),
+// but no auth and no DB: only computes score and returns the result.
+func (sc *ScoreController) GameCalculate(c *gin.Context) {
+	var req request.GameResultRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: gametype and question_responses are required"})
+		return
+	}
+
+	gt := game.GameType(req.GameType)
+	if err := gt.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := sc.scorer.Calculate(gt.StrategyFor(), req.QuestionResponses)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

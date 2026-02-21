@@ -49,6 +49,8 @@ func Init(cfg *config.AppConfig) {
 	// Public routes (no auth required)
 	router.GET("/health", controllers.HealthController.Health)
 	router.GET("/api/dashboard", controllers.DashboardController.GetDashboard)
+	router.POST("/api/game/guest/result", controllers.ScoreController.GameCalculate)
+	router.DELETE("/api/admin/cleanup", controllers.CleanupController.CleanupByDateRange)
 	router.POST("/auth/google", controllers.AuthController.GoogleLogin)
 
 	// Debug routes

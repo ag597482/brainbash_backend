@@ -16,6 +16,7 @@ type Controllers struct {
 	DebugController     *DebugController
 	ScoreController     *ScoreController
 	DashboardController *DashboardController
+	CleanupController   *CleanupController
 }
 
 func NewControllers(cfg *config.AppConfig) *Controllers {
@@ -29,6 +30,7 @@ func NewControllers(cfg *config.AppConfig) *Controllers {
 	dashboardRepo := repository.NewDashboardRepository(appMongo.GetDatabase())
 	dashboardService := service.NewDashboardService(dashboardRepo, userService)
 	scoreService := service.NewScoreService(scoreRepo, scorer, dashboardService)
+	cleanupService := service.NewCleanupService(scoreRepo, dashboardRepo)
 
 	return &Controllers{
 		HealthController:    NewHealthController(),
@@ -36,6 +38,7 @@ func NewControllers(cfg *config.AppConfig) *Controllers {
 		DebugController:     NewDebugController(cfg, userService),
 		ScoreController:     NewScoreController(scorer, scoreService),
 		DashboardController: NewDashboardController(dashboardService),
+		CleanupController:   NewCleanupController(cleanupService),
 	}
 }
 

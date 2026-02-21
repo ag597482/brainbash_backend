@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -48,4 +49,34 @@ func (r *DashboardRepository) Upsert(ctx context.Context, d *entity.Dashboard) e
 		return fmt.Errorf("upsert dashboard: %w", err)
 	}
 	return nil
+}
+
+// DeleteEntriesInDateRange removes dashboard entries whose timestamp falls within [start, end].
+// Finds the dashboard doc, filters each game-type array in memory, then upserts.
+func (r *DashboardRepository) DeleteEntriesInDateRange(ctx context.Context, start, end time.Time) error {
+	d, err := r.FindByID(ctx, entity.DashboardDocID)
+	if err != nil {
+		return err
+	}
+	if d == nil {
+		return nil
+	}
+	d.ProcessingSpeed = filterEntriesByDateRange(d.ProcessingSpeed, start, end)
+	d.WorkingMemory = filterEntriesByDateRange(d.WorkingMemory, start, end)
+	d.LogicalReasoning = filterEntriesByDateRange(d.LogicalReasoning, start, end)
+	d.MathReasoning = filterEntriesByDateRange(d.MathReasoning, start, end)
+	d.ReflexTime = filterEntriesByDateRange(d.ReflexTime, start, end)
+	d.AttentionControl = filterEntriesByDateRange(d.AttentionControl, start, end)
+	return r.Upsert(ctx, d)
+}
+
+func filterEntriesByDateRange(entries []entity.DashboardEntry, start, end time.Time) []entity.DashboardEntry {
+	out := make([]entity.DashboardEntry, 0, len(entries))
+	for _, e := range entries {
+		t := e.Timestamp
+		if t.Before(start) || t.After(end) {
+			out = append(out, e)
+		}
+	}
+	return out
 }

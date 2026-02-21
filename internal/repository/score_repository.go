@@ -49,3 +49,18 @@ func (r *ScoreRepository) Upsert(ctx context.Context, score *entity.Score) error
 	}
 	return nil
 }
+
+// FindAll returns all score documents (for cleanup by date range).
+func (r *ScoreRepository) FindAll(ctx context.Context) ([]*entity.Score, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, fmt.Errorf("find all scores: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var out []*entity.Score
+	if err := cursor.All(ctx, &out); err != nil {
+		return nil, fmt.Errorf("decode scores: %w", err)
+	}
+	return out, nil
+}
